@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agentic SDLC Orchestrator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <h1>Agentic SDLC Orchestrator</h1>
+    <span class="sub">URL shortener &middot; agents execute, humans approve</span>
+  </div>
+  <div class="header-controls">
+    <a class="btn" href="shortener.html">URL Shortener app &rarr;</a>
+    <label class="inline">Reviewer
+      <input id="reviewer" value="reviewer.one" maxlength="40" aria-label="Your reviewer identity">
+    </label>
+    <button id="killSwitch" class="btn danger" title="Safe-stop every active run and block resuming">Kill switch: off</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <section class="card">
+      <h2>Start a run</h2>
+      <div id="scenarios" class="scenarios" role="radiogroup" aria-label="Scenario"></div>
+      <label class="stack">Requirement
+        <textarea id="requirement" rows="5"></textarea>
+      </label>
+      <label class="stack">Failure injection
+        <select id="failureMode">
+          <option value="none">None - happy path</option>
+          <option value="transient">Transient failures (retry / recovery, MTTR)</option>
+          <option value="permanent">Permanent failure (retries exhausted, rollback)</option>
+        </select>
+      </label>
+      <button id="startBtn" class="btn primary">Start run</button>
+      <p id="startError" class="error" role="alert"></p>
+    </section>
+
+    <section class="card">
+      <h2>Runs <button id="refreshRuns" class="btn tiny" aria-label="Refresh runs">&#8635;</button></h2>
+      <ul id="runList" class="runlist"></ul>
+    </section>
+
+    <section class="card" id="globalMetrics">
+      <h2>Reliability (all runs)</h2>
+      <div id="globalMetricsBody" class="kv"></div>
+    </section>
+  </aside>
+
+  <section class="content">
+    <div id="empty" class="card empty">
+      <h2>Pick a scenario and start a run</h2>
+      <p>Each scenario decomposes a requirement into a dependency graph, executes it with agents under policy
+        guardrails, and stops at human checkpoints. Nothing is deployed.</p>
+    </div>
+
+    <div id="runView" hidden>
+      <div class="card banner" id="banner"></div>
+      <div class="metrics" id="runMetrics"></div>
+
+      <div class="card">
+        <h2>Workflow graph <span class="legend" id="legend"></span></h2>
+        <div class="graph-wrap"><svg id="graph" role="img" aria-label="Workflow dependency graph"></svg></div>
+      </div>
+
+      <div class="card" id="taskPanel" hidden></div>
+
+      <div class="card">
+        <nav class="tabs" role="tablist">
+          <button class="tab active" data-tab="timeline" role="tab">Audit timeline</button>
+          <button class="tab" data-tab="lineage" role="tab">Decision lineage</button>
+          <button class="tab" data-tab="artifacts" role="tab">Artifacts</button>
+          <button class="tab" data-tab="summary" role="tab">Final summary</button>
+        </nav>
+        <div id="tabBody" class="tabbody"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

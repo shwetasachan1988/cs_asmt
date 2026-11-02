@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  flyway:
+    locations: classpath:db/migration
+
+management:
+  health:
+    redis:
+      enabled: false
+
+shortener:
+  cache: memory
+  rate-limit:
+    max-requests: 5
+    window-seconds: 60
+
+orchestrator:
+  agent-think-millis: 0
+  retry-backoff-millis: 5
+  workspace-root: target/test-workspace
+  codebase-root: src/main

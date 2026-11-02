@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL Shortener</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .wrap { max-width: 860px; margin: 24px auto; padding: 0 16px; display: flex; flex-direction: column; gap: 16px; }
+    .row { display: flex; gap: 8px; } .row input { flex: 1; }
+    .row .btn { width: auto; white-space: nowrap; }
+    .result { border-left: 3px solid var(--ok); padding: 6px 12px; background: var(--bg); border-radius: 6px; }
+    .link { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .link .t { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+    .link .acts { display: flex; gap: 6px; align-items: center; }
+    .stats { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+    .gone { opacity: .5; text-decoration: line-through; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand"><h1>URL Shortener</h1><span class="sub">the product the orchestrator evolves</span></div>
+  <a class="btn" href="index.html">Orchestrator dashboard &rarr;</a>
+</header>
+<div class="wrap">
+  <section class="card">
+    <h2>Shorten a URL</h2>
+    <form id="form" class="row">
+      <input id="url" type="url" required placeholder="https://example.com/some/long/path" aria-label="URL to shorten">
+      <button class="btn primary" type="submit">Shorten</button>
+    </form>
+    <p id="msg" class="error" role="alert"></p>
+    <div id="result" class="result" hidden></div>
+    <p class="sub">Only http/https. Localhost and private addresses are rejected; creation is rate limited to 60 per minute per client.</p>
+  </section>
+  <section class="card">
+    <h2>Your links (this browser) <button id="clear" class="btn tiny">clear list</button></h2>
+    <div id="links"></div>
+  </section>
+</div>
+<script>
+'use strict';
+const KEY = 'shortener.links';
+const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { return []; } };
+const save = (l) => { try { localStorage.setItem(KEY, JSON.stringify(l.slice(0, 50))); } catch (e) { /* storage unavailable */ } };
+let links = load();
+
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (v != null) e.setAttribute(k, v);
+  }
+  kids.flat().forEach((c) => e.append(c && c.nodeType ? c : document.createTextNode(String(c))));
+  return e;
+}
+async function stats(l, box) {
+  const res = await fetch(`/api/v1/links/${l.code}/stats`);
+  if (!res.ok) { box.textContent = 'stats unavailable (link deleted?)'; return; }
+  const s = await res.json();
+  const refs = Object.entries(s.topReferrers).map(([k, v]) => `${k} (${v})`).join(', ') || 'none';
+  box.textContent = `clicks ${s.totalClicks} · unique visitors ${s.uniqueVisitors} · referrers: ${refs}`;
+}
+async function remove(l) {
+  await fetch(`/api/v1/links/${l.code}`, { method: 'DELETE' });
+  l.deleted = true; save(links); render();
+}
+function render() {
+  $links.replaceChildren(...(links.length ? links.map((l) => {
+    const box = el('div', { class: 'stats' }, 'click "stats" to load analytics');
+    return el('div', { class: 'link' },
+      el('div', {}, el('a', { href: l.shortUrl, target: '_blank', rel: 'noopener', class: l.deleted ? 'gone' : '' }, l.shortUrl),
+        el('div', { class: 't' }, '→ ' + l.targetUrl)),
+      el('div', { class: 'acts' },
+        el('button', { class: 'btn tiny', onclick: () => stats(l, box) }, 'stats'),
+        el('button', { class: 'btn tiny danger', onclick: () => remove(l), disabled: l.deleted ? '' : null }, 'delete')),
+      box);
+  }) : [el('p', { class: 'sub' }, 'No links yet.')]));
+}
+const $links = document.getElementById('links');
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('msg'), result = document.getElementById('result');
+  msg.textContent = ''; result.hidden = true;
+  const res = await fetch('/api/v1/links', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: document.getElementById('url').value }) });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) { msg.textContent = body.detail || `HTTP ${res.status}`; return; }
+  links.unshift(body); save(links); render();
+  result.replaceChildren('Created: ', el('a', { href: body.shortUrl, target: '_blank', rel: 'noopener' }, body.shortUrl));
+  result.hidden = false;
+  document.getElementById('url').value = '';
+});
+document.getElementById('clear').addEventListener('click', () => { links = []; save(links); render(); });
+render();
+</script>
+</body>
+</html>

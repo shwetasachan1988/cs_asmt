@@ -1,0 +1,68 @@
+spring:
+  application:
+    name: agentic-url-shortener
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/shortener}
+    username: ${DB_USER:shortener}
+    password: ${DB_PASSWORD:shortener}
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 3000
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 200ms
+  flyway:
+    enabled: true
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+shortener:
+  base-url: ${BASE_URL:http://localhost:8080}
+  code-length: 7
+  max-url-length: 2048
+  cache-ttl-seconds: 3600
+  # allow-private-targets=false blocks SSRF-style targets (localhost, RFC1918, link-local)
+  allow-private-targets: false
+  rate-limit:
+    enabled: true
+    max-requests: 60
+    window-seconds: 60
+  analytics:
+    queue-capacity: 10000
+    workers: 2
+
+orchestrator:
+  llm:
+    # optional: with a key, the requirements analyst adds a Claude review as an advisory artifact; blank = off
+    api-key: ${ANTHROPIC_API_KEY:}
+    model: ${ANTHROPIC_MODEL:claude-opus-5-5}
+  # source tree the codebase-analysis agent reads (read-only); agents may only write under workspace-root
+  codebase-root: ${CODEBASE_ROOT:src/main}
+  workspace-root: ${WORKSPACE_ROOT:workspace}
+  max-parallel-tasks: 4
+  max-replans-per-run: 5
+  max-tasks-per-run: 60
+  retry-backoff-millis: 150
+  # simulated agent latency so the dashboard shows live progress; set 0 for tests
+  agent-think-millis: ${AGENT_THINK_MILLIS:700}
+  task-timeout-seconds: 60
+  # live service the smoke/regression agents call over HTTP; blank = this process's own port
+  smoke-base-url: ${SMOKE_BASE_URL:}
+  api-key: ${ORCHESTRATOR_API_KEY:}
